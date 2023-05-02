@@ -111,7 +111,7 @@ class PurePursuit:
         # Limit the steering angle
         print("yaw :", current_pose[2])
         print("steer - yaw :", steering_angle)
-        steering_angle = np.clip(steering_angle, -self.max_steering_angle, self.max_steering_angle)
+        # steering_angle = np.clip(steering_angle, -self.max_steering_angle, self.max_steering_angle)
         print("steer after clip :", steering_angle)
 
         return steering_angle
@@ -159,7 +159,7 @@ class Controller:
         for marker in self.path_points:
             vertex_xy = np.array((marker.x, marker.y))
             # print(np.linalg.norm(np_pose - vertex_xy))
-            if np.linalg.norm(np_pose - vertex_xy) < 1.0:
+            if np.linalg.norm(np_pose - vertex_xy) < 2.0:
                 self.path_points.remove(marker)
             #print(marker)
     
@@ -238,12 +238,28 @@ class Controller:
             # print("current pose")
             # print(current_pose)
             steering_angle = self.pure_pursuit.calculate_steering_angle(current_pose, self.path_points)
+            '''
+            Rviz 기반 시뮬레이터 환경의 경우 차량의 조향 값 범위는
+            -3.14 ~ 3.14
+            
+            근데 MoraiSim의 범위는
+            -0.5 ~ 0.5 (일거임 아마)
+            
+            '''
+            # steering limit in Rviz sim
+            min_val = -3.14
+            max_val = 3.14
+            # steering limit in moraiSim
+            norm_min = -0.5
+            norm_max = 0.5
         
-            morai_cmd.accel = 0.4
-            shifted_steering = steering_angle + 3.14
-            modified_steering = (2 * shifted_steering) / 6.28
-            refined_steering = modified_steering - 1
-            morai_cmd.steering = refined_steering
+            morai_cmd.accel = 0.3
+
+            relative_pos = (steering_angle - min_val) / (max_val - min_val)
+
+            norm_pos = norm_min + relative_pos * (norm_max - norm_min)
+
+            morai_cmd.steering = norm_pos
             
             # ack_cmd.drive.speed = 0.55
             # ack_cmd.drive.steering_angle = steering_angle
