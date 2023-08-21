@@ -14,9 +14,9 @@ from morai_msgs.msg import CtrlCmd
 from tf.transformations import euler_from_quaternion
 
 class PurePursuit:
-    def __init__(self, lookahead_distance, max_steering_angle):
+    def __init__(self, lookahead_distance):
+        self.pi = 3.141592
         self.lookahead_distance = lookahead_distance
-        self.max_steering_angle = max_steering_angle
         self.test_marker = rospy.Publisher("/current_goal", Marker, queue_size=1)
 
     def calculate_steering_angle(self, current_pose, path):
@@ -91,31 +91,40 @@ class PurePursuit:
 
         self.test_marker.publish(tmp_marker)
 
+        print("current_pose")
+        print(current_pose)
+        print()
+
         # Calculate the steering angle
         steering_angle = np.arctan2(lookahead_point[1] - current_pose[1], lookahead_point[0] - current_pose[0])
-        
-        print("steer :", steering_angle)
-        if steering_angle < 0:
-            if current_pose[2] < 0:
-                steering_angle = steering_angle - current_pose[2]
-            else:
-                steering_angle = steering_angle - current_pose[2]
-        elif steering_angle >= 0:
-            if current_pose[2] < 0:
-                steering_angle = steering_angle + current_pose[2]
-            else:
-                steering_angle = steering_angle - current_pose[2]
-        
-        # steering_angle = np.abs(steering_angle) + np.abs(current_pose[2]) - 6.28
-            
-        #print("steering_angle")
-        #print(steering_angle)
+
+        angle_difference = steering_angle - current_pose[2]
+
+        steering_angle = np.arctan2(np.sin(angle_difference), np.cos(angle_difference))
+
+        # print("steering_angle before")
+        # print(steering_angle)
+        # print()
+        #
+        # steering_angle = steering_angle - current_pose[2]
+        #
+        # print("steering_angle after")
+        # print(steering_angle)
+        # print()
+        #
+        # if abs(steering_angle) >= self.pi:
+        #     if steering_angle > 0:
+        #         steering_angle = steering_angle - self.pi
+        #     else:
+        #         steering_angle = steering_angle + self.pi
+        #
+        # print("steering_angle after 2")
+        # print(steering_angle)
+        # print()
 
         # Limit the steering angle
         print("yaw :", current_pose[2])
         print("steer - yaw :", steering_angle)
-        # steering_angle = np.clip(steering_angle, -self.max_steering_angle, self.max_steering_angle)
-        print("steer after clip :", steering_angle)
 
         return steering_angle
 
@@ -131,7 +140,7 @@ class Controller:
     def __init__(self):
         print("Controller __init__ called.")
         self.path = None
-        self.pure_pursuit = PurePursuit(0.0, 0.5)
+        self.pure_pursuit = PurePursuit(0.0)
         self.pub = rospy.Publisher("/ctrl_cmd", CtrlCmd, queue_size=1)
         # self.pub = rospy.Publisher("/drive", AckermannDriveStamped, queue_size=1)
 
@@ -197,7 +206,17 @@ class Controller:
         morai_cmd = CtrlCmd()
         # ack_cmd = AckermannDriveStamped()
         if self.path == None or len(self.path_points) == 0:
-            pass
+            # If next goal(vertex) is empty, vehicle stops immediately.
+
+            morai_cmd.accel = 0
+            morai_cmd.velocity = 0
+            morai_cmd.steering = 0
+
+            print("Goal is empty !!")
+
+            self.pub.publish(morai_cmd)
+            # self.pub.publish(ack_cmd)
+            rate.sleep()
         else:
             orientation_q = msg.pose.pose.orientation
             orientation_list = [orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w]
@@ -256,7 +275,9 @@ class Controller:
             norm_min = -0.5
             norm_max = 0.5
         
-            morai_cmd.accel = 0.3
+            morai_cmd.accel = 0.25
+            #morai_cmd.acceleration = 0.3
+            morai_cmd.velocity = 1.5
 
             relative_pos = (steering_angle - min_val) / (max_val - min_val)
 
