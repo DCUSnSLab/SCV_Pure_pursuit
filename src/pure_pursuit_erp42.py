@@ -5,7 +5,7 @@ import rospy
 import time
 import numpy as np
 
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Point, Twist
 from ackermann_msgs.msg import AckermannDriveStamped
 from visualization_msgs.msg import Marker, MarkerArray
 from nav_msgs.msg import Odometry
@@ -102,26 +102,6 @@ class PurePursuit:
 
         steering_angle = np.arctan2(np.sin(angle_difference), np.cos(angle_difference))
 
-        # print("steering_angle before")
-        # print(steering_angle)
-        # print()
-        #
-        # steering_angle = steering_angle - current_pose[2]
-        #
-        # print("steering_angle after")
-        # print(steering_angle)
-        # print()
-        #
-        # if abs(steering_angle) >= self.pi:
-        #     if steering_angle > 0:
-        #         steering_angle = steering_angle - self.pi
-        #     else:
-        #         steering_angle = steering_angle + self.pi
-        #
-        # print("steering_angle after 2")
-        # print(steering_angle)
-        # print()
-
         # Limit the steering angle
         print("yaw :", current_pose[2])
         print("steer - yaw :", steering_angle)
@@ -141,7 +121,9 @@ class Controller:
         print("Controller __init__ called.")
         self.path = None
         self.pure_pursuit = PurePursuit(0.0)
-        self.pub = rospy.Publisher("/ctrl_cmd", CtrlCmd, queue_size=1)
+
+        self.moraipub = rospy.Publisher("/ctrl_cmd", CtrlCmd, queue_size=1)
+        self.SCVpub = rospy.Publisher("/cmd_vel", Twist, queue_size=1)
         # self.pub = rospy.Publisher("/drive", AckermannDriveStamped, queue_size=1)
 
         '''
@@ -204,6 +186,7 @@ class Controller:
         #start = time.time()
     
         morai_cmd = CtrlCmd()
+        SCV_cmd = Twist()
         # ack_cmd = AckermannDriveStamped()
         if self.path == None or len(self.path_points) == 0:
             # If next goal(vertex) is empty, vehicle stops immediately.
@@ -214,7 +197,7 @@ class Controller:
 
             print("Goal is empty !!")
 
-            self.pub.publish(morai_cmd)
+            self.moraipub.publish(morai_cmd)
             # self.pub.publish(ack_cmd)
             rate.sleep()
         else:
@@ -271,19 +254,22 @@ class Controller:
             # steering limit in Rviz sim
             min_val = -3.14
             max_val = 3.14
+
             # steering limit in moraiSim
-            norm_min = -0.5
-            norm_max = 0.5
+            norm_min = -1.0
+            norm_max = 1.0
         
             morai_cmd.accel = 0.25
             #morai_cmd.acceleration = 0.3
             morai_cmd.velocity = 1.5
 
+            # Normalize output steering val -3.14 ~ 3.14 to -1 ~ 1
             relative_pos = (steering_angle - min_val) / (max_val - min_val)
-
             norm_pos = norm_min + relative_pos * (norm_max - norm_min)
-
             morai_cmd.steering = norm_pos
+
+            SCV_cmd.linear = 0.0
+            SCV_cmd.angular = 0.0
             
             # ack_cmd.drive.speed = 0.55
             # ack_cmd.drive.steering_angle = steering_angle
@@ -299,7 +285,8 @@ class Controller:
             print()
             print()
         
-            self.pub.publish(morai_cmd)
+            self.moraipub.publish(morai_cmd)
+            self.SCVpub.publish()
             # self.pub.publish(ack_cmd)
             rate.sleep()
             #end = time.time()
