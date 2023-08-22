@@ -268,8 +268,8 @@ class Controller:
             norm_pos = norm_min + relative_pos * (norm_max - norm_min)
             morai_cmd.steering = norm_pos
 
-            SCV_cmd.linear = 0.0
-            SCV_cmd.angular = 0.0
+            SCV_cmd.linear = 0.3
+            SCV_cmd.angular = norm_pos
             
             # ack_cmd.drive.speed = 0.55
             # ack_cmd.drive.steering_angle = steering_angle
