@@ -268,8 +268,8 @@ class Controller:
             norm_pos = norm_min + relative_pos * (norm_max - norm_min)
             morai_cmd.steering = norm_pos
 
-            SCV_cmd.linear = 0.3
-            SCV_cmd.angular = norm_pos
+            SCV_cmd.linear.x = 0.3
+            SCV_cmd.angular.z = norm_pos
             
             # ack_cmd.drive.speed = 0.55
             # ack_cmd.drive.steering_angle = steering_angle
@@ -286,7 +286,7 @@ class Controller:
             print()
         
             self.moraipub.publish(morai_cmd)
-            self.SCVpub.publish()
+            self.SCVpub.publish(SCV_cmd)
             # self.pub.publish(ack_cmd)
             rate.sleep()
             #end = time.time()
