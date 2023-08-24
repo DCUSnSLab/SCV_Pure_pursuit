@@ -188,7 +188,8 @@ class Controller:
         morai_cmd = CtrlCmd()
         SCV_cmd = Twist()
         # ack_cmd = AckermannDriveStamped()
-        if self.path == None or len(self.path_points) == 0:
+        if self.path == None:
+            print("if")
             # If next goal(vertex) is empty, vehicle stops immediately.
 
             morai_cmd.accel = 0
@@ -199,8 +200,8 @@ class Controller:
 
             self.moraipub.publish(morai_cmd)
             # self.pub.publish(ack_cmd)
-            rate.sleep()
         else:
+            print("else")
             orientation_q = msg.pose.pose.orientation
             orientation_list = [orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w]
             roll, pitch, yaw = euler_from_quaternion(orientation_list)
@@ -288,7 +289,7 @@ class Controller:
             self.moraipub.publish(morai_cmd)
             self.SCVpub.publish(SCV_cmd)
             # self.pub.publish(ack_cmd)
-            rate.sleep()
+            # rate.sleep()
             #end = time.time()
             #print(end - start)
             
